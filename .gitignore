@@ -1,4 +1,5 @@
 data/
 sub-NDARHT518WEM/
 venv/
+.venv/
 __pycache__/
