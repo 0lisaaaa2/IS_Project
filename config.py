@@ -1,0 +1,5 @@
+bids_root = "data"
+subject = "NDARHT518WEM"
+task = "allTasks"
+run = "1"
+#processing = "eyelink"
