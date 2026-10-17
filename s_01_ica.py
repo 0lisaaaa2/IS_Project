@@ -32,7 +32,9 @@ def prepare_ica_data(raw):
 def get_ica(raw):
     ica = mne.preprocessing.ICA(
         n_components=len(mne.pick_types(raw.info, eeg=True)), 
-        method="infomax",  # "fastica" -> use infomax because of icalabel recommendation
+        method="infomax",  #use infomax because of icalabel recommendation
+        # method="picard", #use if picard
+        # fit_params={"extended": True}, #use if picard
         max_iter="auto",
         random_state=97,
         verbose=False
