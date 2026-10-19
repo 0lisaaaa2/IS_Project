@@ -23,7 +23,7 @@ def extended_pipeline():
         #s_00_inspect_data.inspect_data(raw)
 
         # regular ica
-        #clean_raw, n_excluded = s_01_ica.ica(raw)
+        clean_raw, n_excluded = s_01_ica.ica(raw)
         #clean_raw.plot(block=True)
 
         # opticat
@@ -31,7 +31,7 @@ def extended_pipeline():
         #clean_raw_opticat.plot(block=True)
 
 
-        s_02_plots.main(raw)
+        s_02_plots.main(raw, clean_raw)
 
         # Alle Raw-Runs gemeinsam plotten
         #s_02_plots.plot_saccade_frps_raw_runs(runs)

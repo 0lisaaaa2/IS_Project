@@ -19,7 +19,7 @@ def get_info(raw):
 
 
 """
-Plot small and large saccades for une run
+Plot small and large saccades for une run (call in s_02_plots.py)
 """
 def plot_saccade_frps(large, small, clean):
     tmin, tmax = -0.3, 0.5
@@ -100,7 +100,7 @@ def plot_saccade_frps(large, small, clean):
     plt.show()
 
 """
-Plot small und large saccades for several runs
+Plot small und large saccades for several runs (call in main/extended pipeline)
 """
 def plot_saccade_frps_raw_runs(runs):
     tmin, tmax = -0.3, 0.5
@@ -191,7 +191,7 @@ def plot_saccade_frps_raw_runs(runs):
     plt.show()
 
 """
-topoplot for several timestamps
+topoplot for several timestamps (call in s_02_plots.py)
 """
 
 def plot_saccade_topomaps(raw, saccades, title="Sakkaden"):
@@ -311,7 +311,7 @@ def plot_saccade_topomaps(raw, saccades, title="Sakkaden"):
 
 
 
-def main(raw):
+def main(raw, clean):
     large, small = get_info(raw)
     # plot_saccade_frps(large, small, clean)
     plot_saccade_topomaps(raw, large, title="Kleine Sakkaden (≤ 2°)")
