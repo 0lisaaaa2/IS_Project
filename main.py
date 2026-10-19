@@ -16,8 +16,6 @@ def extended_pipeline():
             config.task,
             run_number
         )
-
-        runs.append((f"Run {run_number}", raw))
         #raw.plot(block=True)
 
         #s_00_inspect_data.inspect_data(raw)
@@ -30,13 +28,15 @@ def extended_pipeline():
         #clean_raw_opticat, n_excluded_opticat = s_01_opticat.opticat(raw)
         #clean_raw_opticat.plot(block=True)
 
-        clean_raw_opticat_clean, n_excluded_opticat = s_01_opticat.opticat_clean(raw)
-        clean_raw_opticat_clean.plot(block=True)
+        #clean_raw_opticat_clean, n_excluded_opticat = s_01_opticat.opticat_clean(raw)
+        #clean_raw_opticat_clean.plot(block=True)
 
-        s_02_plots.main(raw, clean_raw)
+        runs.append((f"Run {run_number}", clean_raw))
 
-        # Alle Raw-Runs gemeinsam plotten
-        #s_02_plots.plot_saccade_frps_raw_runs(runs)
+        #s_02_plots.main(raw, clean_raw)
+
+    # Alle Raw-Runs gemeinsam plotten
+    s_02_plots.plot_saccade_frps_raw_runs(runs)
 
 
 if __name__ == "__main__":
