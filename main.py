@@ -2,7 +2,7 @@ import s_00_fetch_data, s_00_inspect_data, s_01_ica, s_01_opticat
 import config
 import numpy as np
 
-import s_01_check_ica
+import s_02_plots
 
 
 def extended_pipeline():
@@ -19,7 +19,7 @@ def extended_pipeline():
     clean_raw_opticat, n_excluded_opticat = s_01_opticat.opticat(raw)
     #clean_raw_opticat.plot(block=True)
 
-    s_01_check_ica.main(raw, clean_raw_opticat)
+    s_02_plots.main(raw, clean_raw_opticat)
 
 if __name__ == "__main__":
     extended_pipeline()
