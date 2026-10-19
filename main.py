@@ -30,6 +30,8 @@ def extended_pipeline():
         #clean_raw_opticat, n_excluded_opticat = s_01_opticat.opticat(raw)
         #clean_raw_opticat.plot(block=True)
 
+        clean_raw_opticat_clean, n_excluded_opticat = s_01_opticat.opticat_clean(raw)
+        clean_raw_opticat_clean.plot(block=True)
 
         s_02_plots.main(raw, clean_raw)
 
