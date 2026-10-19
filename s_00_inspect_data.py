@@ -1,3 +1,5 @@
+import mne
+
 def inspect_data(raw):
     print("\n--- ALLGEMEINE INFORMATIONEN ---")
     print(f"Kanäle: {len(raw.ch_names)}")
@@ -31,3 +33,25 @@ def inspect_data(raw):
 
     print("\n--- REFERENZ ---")
     print("EEG reference:", raw.info.get("custom_ref_applied"))
+    print("Projektoren:", raw.info["projs"])
+
+    for ch in raw.info["chs"]:
+        if ch["ch_name"] in ["HEOG", "VEOG"]:
+            print(ch["ch_name"])
+            print("Typ:", ch["kind"])
+            print("Einheit:", ch["unit"])
+            print("Kalibrierung:", ch["cal"])
+            print("Zusatzinformationen:", ch)
+
+    print("custom_ref_applied:",
+      raw.info.get("custom_ref_applied"))
+
+    print("EEG-Kanäle:", len(
+        mne.pick_types(raw.info, eeg=True, eog=False)
+    ))
+
+    print("EOG-Kanäle:", len(
+        mne.pick_types(raw.info, eeg=False, eog=True)
+    ))
+
+    print("Kanalnamen:", raw.ch_names[:10])
