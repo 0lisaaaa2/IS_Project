@@ -34,6 +34,7 @@ def get_ica(raw):
         n_components=len(mne.pick_types(raw.info, eeg=True)), 
         method="infomax",  #use infomax because of icalabel recommendation
         # method="picard", #use if picard
+        # method ="jamica", #use if jamica
         # fit_params={"extended": True}, #use if picard
         max_iter="auto",
         random_state=97,

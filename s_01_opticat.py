@@ -14,6 +14,7 @@ REMOVE_EPOCHMEAN = True # remove mean from each epoch before ICA fitting (recomm
 SACCADE_LABEL = 'ET_Saccade L' # label of saccade events in annotations
 SACCADE_WINDOW = (-0.020, 0.010) # time window around saccade events in seconds (start, end)
 
+# veraltet
 def opticat(raw):
     # create copy of data used as training data and high-pass filter it 
     raw_ica = raw.copy().pick(
