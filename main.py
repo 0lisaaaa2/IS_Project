@@ -9,7 +9,7 @@ def extended_pipeline():
     runs= []
     # Runs aus der Config laden, z. B. [1, 2, ..., 8]
     for run_number in config.runs:
-        print(f"Lade Run {run_number} ...")
+        print(f"# Lade Run {run_number} ... ############################################################################")
 
         raw = s_00_fetch_data.load_data(
             config.subject,
