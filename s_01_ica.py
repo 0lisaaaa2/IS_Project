@@ -1,5 +1,6 @@
 import mne
 from mne_icalabel import label_components
+import config
 
 """
 Applies ICA to the raw EEG data, identifies and excludes "bad" components, and returns the cleaned data.
@@ -17,7 +18,7 @@ def prepare_ica_data(raw):
 
     # Reduce slow drifts before ICA fitting.
     raw_ica.filter(
-        l_freq=1.0,
+        l_freq=config.highpass,
         h_freq=None,
     )
 

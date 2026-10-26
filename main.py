@@ -21,17 +21,14 @@ def extended_pipeline():
         #s_00_inspect_data.inspect_data(raw)
 
         # regular ica
-        clean_raw, n_excluded = s_01_ica.ica(raw)
+        #clean_raw, n_excluded = s_01_ica.ica(raw)
         #clean_raw.plot(block=True)
 
-        # opticat
-        #clean_raw_opticat, n_excluded_opticat = s_01_opticat.opticat(raw)
+        # opticat ica
+        clean_raw_opticat, n_excluded_opticat = s_01_opticat.opticat(raw)
         #clean_raw_opticat.plot(block=True)
 
-        #clean_raw_opticat_clean, n_excluded_opticat = s_01_opticat.opticat_clean(raw)
-        #clean_raw_opticat_clean.plot(block=True)
-
-        runs.append((f"Run {run_number}", clean_raw))
+        runs.append((f"Run {run_number}", clean_raw_opticat))
 
         #s_02_plots.main(raw, clean_raw)
 
