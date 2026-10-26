@@ -19,99 +19,24 @@ def get_info(raw):
 
 
 """
-Plot small and large saccades for une run (call in s_02_plots.py)
-"""
-def plot_saccade_frps(large, small, clean):
-    tmin, tmax = -0.3, 0.5
-    electrode = config.electrode
-
-    def make_epochs(saccades):
-        onsets = saccades["onset"].to_numpy(dtype=float)
-        samples = clean.first_samp + np.round(
-            (onsets - clean.first_time) * clean.info["sfreq"]
-        ).astype(int)
-
-        events = np.column_stack((
-            samples,
-            np.zeros(len(samples), dtype=int),
-            np.ones(len(samples), dtype=int)
-        ))
-
-        return mne.Epochs(
-            clean, events, event_id={"saccade": 1},
-            tmin=tmin, tmax=tmax, baseline=(tmin, 0),
-            picks="eeg", preload=True,
-            reject_by_annotation=True,
-            event_repeated="drop", verbose=False
-        )
-
-    epochs_large = make_epochs(large)
-    epochs_small = make_epochs(small)
-
-    if len(epochs_large) == 0 or len(epochs_small) == 0:
-        raise ValueError("Eine Gruppe enthält keine gültigen Epochen.")
-
-    # Über die Sakkaden mitteln
-    evoked_large = epochs_large.average()
-    evoked_small = epochs_small.average()
-
-    # Prüfen, ob die gewünschte Elektrode existiert
-    if electrode not in evoked_large.ch_names:
-        raise ValueError(
-            f"Elektrode '{electrode}' nicht gefunden. "
-            f"Verfügbare EEG-Kanäle: {evoked_large.ch_names}"
-        )
-
-    # Spannung nur für die gewählte Elektrode (in µV)
-    voltage_large = (
-        evoked_large.copy().pick([electrode]).data[0] * 1e6
-    )
-    voltage_small = (
-        evoked_small.copy().pick([electrode]).data[0] * 1e6
-    )
-
-    times = evoked_large.times
-
-    # Beide Kurven in einem Graphen
-    fig, ax = plt.subplots(figsize=(10, 5))
-
-    ax.plot(
-        times, voltage_small,
-        color="royalblue",
-        label=f"Klein ≤ 2° (n={len(epochs_small)})"
-    )
-    ax.plot(
-        times, voltage_large,
-        color="gold",
-        label=f"Groß ≥ 10° (n={len(epochs_large)})"
-    )
-
-    ax.axvline(0, color="black", linestyle="--")
-    ax.axhline(0, color="gray", linestyle=":")
-    ax.set(
-        xlim=(tmin, tmax),
-        xlabel="Zeit relativ zum Sakkadenbeginn (s)",
-        ylabel="Voltage (µV)",
-        title=f"FRPs an Elektrode {electrode}"
-    )
-    ax.legend()
-    ax.grid(alpha=0.2)
-    fig.tight_layout()
-    plt.show()
-
-"""
-Plot small und large saccades for several runs (call in main/extended pipeline)
+Plot small, medium und large saccades for several runs.
 """
 def plot_saccade_frps_raw_runs(runs):
     tmin, tmax = -0.3, 0.5
     electrode = config.electrode
     baseline = (tmin, 0)
 
-    fig, axes = plt.subplots(2, 1, figsize=(11, 8), sharex=True)
+    # Drei Plots untereinander
+    fig, axes = plt.subplots(
+        3, 1,
+        figsize=(11, 12),
+        sharex=True
+    )
 
     groups = [
         ("small", "Kleine Sakkaden (≤ 2°)", axes[0]),
-        ("large", "Große Sakkaden (≥ 10°)", axes[1]),
+        ("medium", "Mittlere Sakkaden (2° < Amplitude < 10°)", axes[1]),
+        ("large", "Große Sakkaden (≥ 10°)", axes[2]),
     ]
 
     for run_label, raw in runs:
@@ -122,19 +47,38 @@ def plot_saccade_frps_raw_runs(runs):
             ["onset", "Amplitude"]
         ].dropna(subset=["Amplitude"])
 
+        # Sakkaden nach Amplitude aufteilen
         small = saccades[saccades["Amplitude"] <= 2]
+        medium = saccades[
+            (saccades["Amplitude"] > 2)
+            & (saccades["Amplitude"] < 10)
+        ]
         large = saccades[saccades["Amplitude"] >= 10]
 
-        for group, title, ax in groups:
-            saccades_group = small if group == "small" else large
+        saccade_groups = {
+            "small": small,
+            "medium": medium,
+            "large": large,
+        }
 
+        for group, title, ax in groups:
+            saccades_group = saccade_groups[group]
+
+            if saccades_group.empty:
+                print(
+                    f"{run_label}: keine {group} Sakkaden gefunden"
+                )
+                continue
+
+            # Sakkaden-Onsets in EEG-Samples umrechnen
             onsets = saccades_group["onset"].to_numpy(dtype=float)
 
             samples = (
-                    raw.first_samp
-                    + np.round(
-                (onsets - raw.first_time) * raw.info["sfreq"]
-            ).astype(int)
+                raw.first_samp
+                + np.round(
+                    (onsets - raw.first_time)
+                    * raw.info["sfreq"]
+                ).astype(int)
             )
 
             events = np.column_stack((
@@ -143,6 +87,7 @@ def plot_saccade_frps_raw_runs(runs):
                 np.ones(len(samples), dtype=int)
             ))
 
+            # EEG-Epochen erstellen
             epochs = mne.Epochs(
                 raw,
                 events,
@@ -158,7 +103,9 @@ def plot_saccade_frps_raw_runs(runs):
             )
 
             if len(epochs) == 0:
-                print(f"{run_label}: keine gültigen Epochen für {group}")
+                print(
+                    f"{run_label}: keine gültigen Epochen für {group}"
+                )
                 continue
 
             if electrode not in epochs.ch_names:
@@ -167,8 +114,14 @@ def plot_saccade_frps_raw_runs(runs):
                     f"Verfügbare Kanäle: {epochs.ch_names}"
                 )
 
+            # Über die Epochen mitteln
             evoked = epochs.average()
-            voltage = evoked.copy().pick([electrode]).data[0] * 1e6
+
+            voltage = (
+                evoked.copy()
+                .pick([electrode])
+                .data[0] * 1e6
+            )
 
             ax.plot(
                 evoked.times,
@@ -178,22 +131,34 @@ def plot_saccade_frps_raw_runs(runs):
 
             ax.set_title(title)
             ax.set_ylabel("Voltage (µV)")
-            ax.axvline(0, color="black", linestyle="--", linewidth=0.8)
-            ax.axhline(0, color="gray", linestyle=":", linewidth=0.8)
+            ax.axvline(
+                0, color="black",
+                linestyle="--", linewidth=0.8
+            )
+            ax.axhline(
+                0, color="gray",
+                linestyle=":", linewidth=0.8
+            )
             ax.grid(alpha=0.2)
             ax.legend()
 
-    axes[1].set_xlabel("Zeit relativ zum Sakkadenbeginn (s)")
-    axes[1].set_xlim(tmin, tmax)
+    axes[2].set_xlabel("Zeit relativ zum Sakkadenbeginn (s)")
+    axes[2].set_xlim(tmin, tmax)
 
-    fig.suptitle(f"FRPs über Raw-Runs – Elektrode {electrode}")
-    fig.tight_layout()
+    fig.suptitle(
+        f"FRPs über bereinigte Runs – Elektrode {electrode}",
+        fontsize=14
+    )
+
+    fig.tight_layout(rect=[0, 0, 1, 0.97])
     plt.show()
+
+
+
 
 """
 topoplot for several timestamps (call in s_02_plots.py)
 """
-
 def plot_saccade_topomaps(raw, saccades, title="Sakkaden"):
     # Zeitfenster in Sekunden
     time_bins = [
@@ -311,7 +276,6 @@ def plot_saccade_topomaps(raw, saccades, title="Sakkaden"):
 
 
 
-def main(raw, clean):
+def main(raw):
     large, small = get_info(raw)
-    # plot_saccade_frps(large, small, clean)
     plot_saccade_topomaps(raw, large, title="Kleine Sakkaden (≤ 2°)")

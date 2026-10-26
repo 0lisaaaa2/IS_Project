@@ -1,5 +1,9 @@
 import numpy as np
 from itertools import combinations
+import mne
+import matplotlib.pyplot as plt
+import pandas as pd
+import plotly.graph_objects as go
 
 
 def compare_eog_eeg(raw):
@@ -59,3 +63,15 @@ def check_konstant(raw):
         x = raw.get_data(picks=[name])[0]
         if np.std(x) < 1e-12:
             print("Nahezu flacher EEG-Kanal:", name)
+
+
+def plot_raw_electrodes_3d(raw, show_names=True):
+    fig = mne.viz.plot_sensors(
+        info=raw.info,
+        kind="3d",
+        ch_type="eeg",
+        show_names=show_names,
+        show=False
+    )
+
+    plt.show()
