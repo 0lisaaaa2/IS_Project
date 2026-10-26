@@ -11,7 +11,7 @@ Applies ICA to the raw EEG data, identifies and excludes "bad" components, and r
 def prepare_ica_data(raw):
     # Use EEG channels only; exclude channels already marked as bad.
     raw_ica = raw.copy().pick(
-        picks=["eeg", "eog"],
+        picks=["eeg"],
         exclude="bads",
     )
 
