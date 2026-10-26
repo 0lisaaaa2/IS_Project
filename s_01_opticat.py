@@ -18,7 +18,7 @@ SACCADE_WINDOW = (-0.020, 0.010) # time window around saccade events in seconds 
 def opticat(raw):
     # create copy of data used as training data and high-pass filter it 
     raw_ica = raw.copy().pick(
-        picks=["eeg", "eog"], # include eog channels 
+        picks=["eeg"], # include eog channels 
         exclude="bads",)
     raw_ica.filter(l_freq=FREQ_HIGH_PASS, h_freq=None) 
 
