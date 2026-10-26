@@ -278,4 +278,5 @@ def plot_saccade_topomaps(raw, saccades, title="Sakkaden"):
 
 def main(raw):
     large, small = get_info(raw)
-    plot_saccade_topomaps(raw, large, title="Kleine Sakkaden (≤ 2°)")
+    plot_saccade_topomaps(raw, small, title="Kleine Sakkaden (≤ 2°)") # large
+    plot_saccade_topomaps(raw, large, title="Große Sakkaden (> 10°)")
