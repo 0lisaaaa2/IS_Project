@@ -3,7 +3,6 @@ from itertools import combinations
 import mne
 import matplotlib.pyplot as plt
 import pandas as pd
-import plotly.graph_objects as go
 
 
 def compare_eog_eeg(raw):

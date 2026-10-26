@@ -1,4 +1,4 @@
-import s_00_fetch_data, s_00_inspect_data, s_01_ica, s_01_opticat, s_02_plots
+import s_00_fetch_data, s_00_inspect_data, s_01_ica, s_01_opticat, s_02_plots, s_00_check_eog
 import config
 import pandas as pd
 import numpy as np
@@ -30,7 +30,7 @@ def extended_pipeline():
 
         runs.append((f"Run {run_number}", clean_raw_opticat))
 
-        #s_02_plots.main(raw, clean_raw)
+        #s_02_plots.main(raw) # topoplots
 
     # Alle Raw-Runs gemeinsam plotten
     s_02_plots.plot_saccade_frps_raw_runs(runs)
