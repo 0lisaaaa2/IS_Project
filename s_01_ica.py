@@ -1,6 +1,8 @@
 import mne
 from mne_icalabel import label_components
 import config
+import numpy as np
+import matplotlib.pyplot as plt
 
 """
 Applies ICA to the raw EEG data, identifies and excludes "bad" components, and returns the cleaned data.
@@ -35,8 +37,8 @@ def get_ica(raw):
         n_components=len(mne.pick_types(raw.info, eeg=True)), 
         method="infomax",  #use infomax because of icalabel recommendation
         # method="picard", #use if picard
-        # method ="jamica", #use if jamica
         # fit_params={"extended": True}, #use if picard
+        # method ="jamica", #use if jamica
         max_iter="auto",
         random_state=97,
         verbose=False
@@ -47,7 +49,7 @@ def get_ica(raw):
 # label components using icalabel
 def label_components_ica(raw, ica):
     labels = label_components(raw, ica, method='iclabel')  # probabilities per IC and category
-    #print(labels)
+    print(labels)
     return labels
 
 
@@ -55,11 +57,58 @@ def label_components_ica(raw, ica):
 def exclude_components(ica, labels):
     excluded_components = [
         idx for idx, lbl in enumerate(labels['labels'])
-        if lbl not in ['brain', 'other'] and labels['y_pred_proba'][idx] >= 0.8
+        if lbl not in ['brain', 'other']
+        and labels['y_pred_proba'][idx].max() >= 0.8
     ]
-    #print(f"Excluding components: {excluded_components}")
+    print(f"Excluding components: {excluded_components}")
     ica.exclude = excluded_components
 
+
+def plot_ica_components(ica, labels):
+
+    n_components = ica.n_components_
+    n_cols = 5
+    n_rows = int(np.ceil(n_components / n_cols))
+
+    fig, axes = plt.subplots(
+        n_rows,
+        n_cols,
+        figsize=(15, 3.5 * n_rows)
+    )
+
+    axes = np.atleast_1d(axes).ravel()
+
+    for idx in range(n_components):
+
+        ax = axes[idx]
+
+        # Topoplot erstellen
+        ica.plot_components(
+            picks=idx,
+            axes=ax,
+            show=False
+        )
+
+        # ICLabel-Klasse und Wahrscheinlichkeit
+        label = labels['labels'][idx]
+        probability = labels['y_pred_proba'][idx].max() * 100
+
+        # Beschriftung direkt unter dem Kopf
+        ax.text(
+            0.5, -0.05,
+            f"{label} ({probability:.1f}%)",
+            transform=ax.transAxes,
+            ha='center',
+            va='top',
+            fontsize=10
+        )
+
+    # Nicht benötigte Achsen entfernen
+    for idx in range(n_components, len(axes)):
+        fig.delaxes(axes[idx])
+
+    plt.tight_layout()
+    plt.show()
 
 # main function to do ICA and return cleaned data
 def ica(raw):
@@ -72,8 +121,12 @@ def ica(raw):
 
     # show time series of ICs
     # ica.plot_sources(raw, show_scrollbars=True, show=True)
-    # ica.plot_components()
+    #ica.plot_components()
 
+    # Plot ICA components with ICLabel classification
+    plot_ica_components(ica, labels)
+
+    # Exclude components
     exclude_components(ica, labels)
     n_excluded = len(ica.exclude)
     raw_cleaned = ica.apply(raw.copy())
