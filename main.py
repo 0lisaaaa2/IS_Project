@@ -1,4 +1,4 @@
-import s_00_fetch_data, s_00_inspect_data, s_01_ica, s_01_opticat, s_02_plots, s_00_check_eog
+import s_00_fetch_data, s_00_inspect_data, s_01_ica, s_01_opticat, s_02_plots, s_00_check_eog, s_00_check_saccades
 import config
 import pandas as pd
 import numpy as np
@@ -20,20 +20,30 @@ def extended_pipeline():
 
         #s_00_inspect_data.inspect_data(raw)
 
+        # Untersuchungen zu Blink-Sakkaden
+        blink_results = s_00_check_saccades.check_saccade_blinks(
+            raw,
+            window=0.2,
+            plot=True
+        )
+
         # regular ica
         #clean_raw, n_excluded = s_01_ica.ica(raw)
         #clean_raw.plot(block=True)
 
         # opticat ica
-        clean_raw_opticat, n_excluded_opticat = s_01_opticat.opticat(raw)
+        #clean_raw_opticat, n_excluded_opticat = s_01_opticat.opticat(raw)
         #clean_raw_opticat.plot(block=True)
 
-        runs.append((f"Run {run_number}", clean_raw_opticat))
+
+        runs.append((f"Run {run_number}", raw))
 
         #s_02_plots.main(raw) # topoplots
 
     # Alle Raw-Runs gemeinsam plotten
     s_02_plots.plot_saccade_frps_raw_runs(runs)
+
+
 
 
 if __name__ == "__main__":
