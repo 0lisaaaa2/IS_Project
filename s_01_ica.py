@@ -77,4 +77,4 @@ def ica(raw):
     exclude_components(ica, labels)
     n_excluded = len(ica.exclude)
     raw_cleaned = ica.apply(raw.copy())
-    return raw_cleaned, n_excluded
+    return raw_cleaned, n_excluded, ica

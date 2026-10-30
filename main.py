@@ -1,4 +1,4 @@
-import s_00_fetch_data, s_00_inspect_data, s_01_ica, s_01_opticat, s_02_plots, s_00_check_eog
+import s_00_fetch_data, s_00_inspect_data, s_01_ica, s_01_opticat, s_02_plots, s_00_check_eog, s_02_blink_ica_analysis
 import config
 import pandas as pd
 import numpy as np
@@ -18,17 +18,20 @@ def extended_pipeline():
         )
         #raw.plot(block=True)
 
-        #s_00_inspect_data.inspect_data(raw)
+        s_00_inspect_data.inspect_data(raw)
 
         # regular ica
-        #clean_raw, n_excluded = s_01_ica.ica(raw)
+        clean_raw, n_excluded, ica = s_01_ica.ica(raw)
         #clean_raw.plot(block=True)
 
+        # blink analysis
+        s_02_blink_ica_analysis.analyze_blink_ica(raw, ica, clean_raw)
+
         # opticat ica
-        clean_raw_opticat, n_excluded_opticat = s_01_opticat.opticat(raw)
+        #clean_raw_opticat, n_excluded_opticat = s_01_opticat.opticat(raw)
         #clean_raw_opticat.plot(block=True)
 
-        runs.append((f"Run {run_number}", clean_raw_opticat))
+        #runs.append((f"Run {run_number}", clean_raw_opticat))
 
         #s_02_plots.main(raw) # topoplots
 
