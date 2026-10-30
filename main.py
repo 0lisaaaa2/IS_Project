@@ -21,15 +21,15 @@ def extended_pipeline():
         s_00_inspect_data.inspect_data(raw)
 
         # regular ica
-        clean_raw, n_excluded, ica = s_01_ica.ica(raw)
+        #clean_raw, n_excluded, ica, labels = s_01_ica.ica(raw)
         #clean_raw.plot(block=True)
 
-        # blink analysis
-        s_02_blink_ica_analysis.analyze_blink_ica(raw, ica, clean_raw)
-
         # opticat ica
-        #clean_raw_opticat, n_excluded_opticat = s_01_opticat.opticat(raw)
+        clean_raw_opticat, ica, n_excluded_opticat, labels = s_01_opticat.opticat(raw)
         #clean_raw_opticat.plot(block=True)
+        
+        # blink analysis
+        s_02_blink_ica_analysis.analyze_blink_ica(raw, ica, clean_raw_opticat, labels)
 
         #runs.append((f"Run {run_number}", clean_raw_opticat))
 

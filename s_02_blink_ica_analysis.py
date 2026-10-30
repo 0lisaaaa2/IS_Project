@@ -7,6 +7,7 @@ def analyze_blink_ica(
     raw,
     ica,
     raw_clean,
+    labels,
     tmin=-0.5,
     tmax=0.5,
     top_n_components=10
@@ -207,6 +208,67 @@ def analyze_blink_ica(
     # epochs_ica.plot_image(
     #     picks=top_components
     # )
+
+    # NEU
+    import matplotlib.pyplot as plt
+
+    # ICLabel-Kategorien und Farben
+    label_colors = {
+        "brain": "blue",
+        "muscle": "red",
+        "eye": "orange",
+        "heart": "green",
+        "line_noise": "purple",
+        "channel_noise": "gray",
+        "other": "brown"
+    }
+
+    # Labels aus ICLabel
+    component_labels = labels["labels"]
+
+    # Alle ICA-Komponenten anzeigen
+    #all_components = np.arange(ica.n_components_)
+    all_components = top_components  # Nur die Top-Komponenten anzeigen
+
+    fig, ax = plt.subplots(figsize=(14, 6))
+
+    for component in all_components:
+
+        # ICLabel-Kategorie der Komponente
+        label = component_labels[component]
+
+        # Zugehörige Farbe
+        color = label_colors.get(label, "black")
+
+        # Zeitverlauf der gemittelten ICA-Komponente
+        ax.plot(
+            evoked_ica.times,
+            evoked_ica.data[component],
+            color=color,
+            label=f"IC {component}: {label}",
+            linewidth=1.5
+        )
+    # Blink-Zeitpunkt markieren
+    ax.axvline(
+        0,
+        color="black",
+        linestyle="--",
+        linewidth=1,
+        label="ET_Blink L"
+    )
+    ax.set_title(
+        "ICA-Komponenten während linker Blinks – ICLabel"
+    )
+    ax.set_xlabel("Zeit (s)")
+    ax.set_ylabel("ICA-Aktivität (AU)")
+    ax.legend(
+        bbox_to_anchor=(1.02, 1),
+        loc="upper left"
+    )
+    ax.grid(alpha=0.2)
+    plt.tight_layout()
+    plt.show()
+
 
     
 
