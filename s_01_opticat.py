@@ -62,8 +62,8 @@ def opticat(raw):
     # fit infomax ica on augmented data
     ica_opticat = mne.preprocessing.ICA(
             n_components=len(mne.pick_types(raw_ica.info, eeg=True)),
-            method="infomax",
-            #method="jamica", # combine opticat + jamica
+            #method="infomax",
+            method="jamica", # combine opticat + jamica
             max_iter="auto",
             random_state=97,
             verbose=False)
@@ -82,4 +82,4 @@ def opticat(raw):
 
     # apply to original data
     raw_cleaned_opticat = ica_opticat.apply(raw.copy())
-    return raw_cleaned_opticat, len(ica_opticat.exclude)
+    return raw_cleaned_opticat, ica_opticat, len(ica_opticat.exclude), labels
