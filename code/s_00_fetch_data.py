@@ -1,4 +1,3 @@
-from mne_bids import BIDSPath, read_raw_bids
 import config
 from pathlib import Path
 import mne

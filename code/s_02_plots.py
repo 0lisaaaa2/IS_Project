@@ -47,6 +47,15 @@ def plot_saccade_frps_raw_runs(runs):
             ["onset", "Amplitude"]
         ].dropna(subset=["Amplitude"])
 
+        blink_windows = [(a["onset"], a["onset"] + a["duration"])
+                         for a in raw.annotations
+                         if a["description"].startswith("ET_bad_blink")]
+
+        near_blink = saccades["onset"].apply(
+            lambda t: any(s <= t <= e for s, e in blink_windows))
+        print(f"{run_label}: {near_blink.sum()} Sakkaden im Blink-Fenster ausgeschlossen")
+        saccades = saccades[~near_blink]
+
         # Sakkaden nach Amplitude aufteilen
         small = saccades[saccades["Amplitude"] <= 2]
         medium = saccades[

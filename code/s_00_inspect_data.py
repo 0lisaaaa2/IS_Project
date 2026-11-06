@@ -1,4 +1,3 @@
-from envs.frozenlake_env.Lib.collections import Counter
 import mne
 from collections import Counter
 

@@ -35,10 +35,7 @@ def prepare_ica_data(raw):
 def get_ica(raw):
     ica = mne.preprocessing.ICA(
         n_components=len(mne.pick_types(raw.info, eeg=True)), 
-        method="infomax",  #use infomax because of icalabel recommendation
-        # method="picard", #use if picard
-        # fit_params={"extended": True}, #use if picard
-        # method ="jamica", #use if jamica
+        method=config.ica,
         max_iter="auto",
         random_state=97,
         verbose=False
@@ -131,3 +128,32 @@ def ica(raw):
     n_excluded = len(ica.exclude)
     raw_cleaned = ica.apply(raw.copy())
     return raw_cleaned, n_excluded, ica, labels
+
+
+
+# set the same bad channels in all runs (union), so that one ICA fits all runs
+# NOTE: changes raw.info["bads"] of the given runs in place
+def unify_bads(raws):
+    all_bads = sorted(set().union(*(raw.info["bads"] for raw in raws)))
+    for raw in raws:
+        raw.info["bads"] = list(all_bads)
+    print(f"Bad channels (union over all runs): {all_bads}")
+    return all_bads
+
+
+# fit ONE ICA on all runs together; apply it later to each run separately
+def fit(raws):
+    unify_bads(raws)
+
+    # concatenate copies (concatenate_raws changes the first raw in place)
+    raw_all = mne.concatenate_raws([raw.copy() for raw in raws])
+
+    raw_ica = prepare_ica_data(raw_all)
+    ica = get_ica(raw_ica)
+
+    ica.fit(raw_ica)
+
+    labels = label_components_ica(raw_ica, ica)
+    exclude_components(ica, labels)
+
+    return ica, labels

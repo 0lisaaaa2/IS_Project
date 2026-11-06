@@ -1,6 +1,6 @@
+import config
 import mne
-import pandas as pd
-import numpy as np
+
 
 def extract_eyetracking_events(raw):
     annotations = raw.annotations
@@ -25,8 +25,11 @@ def extract_eyetracking_events(raw):
 
     return blink_events, saccade_events, fixation_events
 
-def mark_blink_periods(raw, eye="L", pre_ms=50, post_ms=150,
-                       label="ET_bad_blink"):
+def mark_blink_periods(raw):
+    eye = config.eye
+    pre_ms = config.blink_pre_ms
+    post_ms = config.blink_post_ms
+    label= "ET_bad_blink"
     blinks, saccades, _ = extract_eyetracking_events(raw)
     blinks   = [b for b in blinks   if b["description"].endswith(eye)]
     saccades = [s for s in saccades if s["description"].endswith(eye)]
