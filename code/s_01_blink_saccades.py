@@ -1,7 +1,6 @@
 import config
 import mne
 
-
 def extract_eyetracking_events(raw):
     annotations = raw.annotations
     blink_events = []
@@ -53,50 +52,3 @@ def mark_blink_periods(raw):
     out = raw.copy()
     out.set_annotations(out.annotations + ann)
     return out
-
-def remove_saccades_around_blinks(raw):
-    extend_ms = 50
-    blink_events, saccade_events, fixation_events = (extract_eyetracking_events(raw))
-    extend_sec = extend_ms / 1000
-
-    bad_onsets = []
-    bad_durations = []
-    removed_saccades = []
-
-    for saccade in saccade_events:
-        remove = False
-        for blink in blink_events:
-            blink_start = blink["onset"] - extend_sec
-            blink_end = blink["offset"] + extend_sec
-            if (saccade["onset"] <= blink_end and saccade["offset"] >= blink_start):
-                remove = True
-                break
-
-        if remove:
-            removed_saccades.append(saccade)
-
-            # Zeitraum der Sakkade als BAD markieren
-            bad_onsets.append(saccade["onset"])
-            bad_durations.append(saccade["duration"])
-
-    # Raw kopieren, damit das Original erhalten bleibt
-    cleaned_raw = raw.copy()
-
-    # BAD-Annotations hinzufügen
-    if bad_onsets:
-        bad_annotations = mne.Annotations(
-            onset=bad_onsets,
-            duration=bad_durations,
-            description=["BAD_saccade_blink"] * len(bad_onsets),
-            orig_time=cleaned_raw.annotations.orig_time
-        )
-
-        cleaned_raw.set_annotations(
-            cleaned_raw.annotations + bad_annotations
-        )
-
-    print("Blinks:", len(blink_events))
-    print("Original saccades:", len(saccade_events))
-    print("Removed saccades:", len(removed_saccades))
-
-    return cleaned_raw
