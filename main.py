@@ -1,5 +1,4 @@
-import s_00_fetch_data, s_00_inspect_data, s_01_ica, s_01_opticat, s_02_plots, s_00_check_eog, s_02_blink_ica_analysis
-import s_00_fetch_data, s_00_inspect_data, s_01_ica, s_01_opticat, s_02_plots, s_00_check_eog, s_00_check_saccades
+import s_00_fetch_data, s_00_inspect_data, s_01_ica, s_01_opticat, s_02_plots, s_00_check_eog, s_02_blink_ica_analysis, s_00_check_saccades, s_01_eyetracking_analysis
 import config
 import pandas as pd
 import numpy as np
@@ -19,25 +18,29 @@ def extended_pipeline():
         )
         #raw.plot(block=True)
 
-        s_00_inspect_data.inspect_data(raw)
+        #s_00_inspect_data.inspect_data(raw)
 
         # Untersuchungen zu Blink-Sakkaden
-        blink_results = s_00_check_saccades.check_saccade_blinks(
-            raw,
-            window=0.2,
-            plot=True
-        )
+        # blink_results = s_00_check_saccades.check_saccade_blinks(
+        #     raw,
+        #     window=0.2,
+        #     plot=True
+        # )
+
+        # eyetracking analysis
+        events, event_id, blink_events, saccade_events = s_01_eyetracking_analysis.plot_left_eye_events_plt(raw)
+        #events, event_id = s_01_eyetracking_analysis.plot_left_eye_events_scroll(raw)
 
         # regular ica
         #clean_raw, n_excluded, ica, labels = s_01_ica.ica(raw)
         #clean_raw.plot(block=True)
 
         # opticat ica
-        clean_raw_opticat, ica, n_excluded_opticat, labels = s_01_opticat.opticat(raw)
+        #clean_raw_opticat, ica, n_excluded_opticat, labels = s_01_opticat.opticat(raw)
         #clean_raw_opticat.plot(block=True)
         
         # blink analysis
-        s_02_blink_ica_analysis.analyze_blink_ica(raw, ica, clean_raw_opticat, labels)
+        #s_02_blink_ica_analysis.analyze_blink_ica(raw, ica, clean_raw_opticat, labels)
 
 
         runs.append((f"Run {run_number}", raw))
