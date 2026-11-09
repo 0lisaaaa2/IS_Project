@@ -1,4 +1,4 @@
-import s_00_fetch_data, s_01_blink_saccades, s_01_ica, s_01_opticat, s_02_plots
+import s_00_fetch_data, s_01_blink_saccades, s_01_ica, s_01_opticat, s_02_plots, s_01_eyetracking_analysis
 import config
 
 def extended_pipeline():
@@ -10,10 +10,7 @@ def extended_pipeline():
         raws[run] = s_01_blink_saccades.mark_blink_periods(raw)
 
     # 2. ICA trainieren
-    if config.opticat == True:
-        ica_model, labels = s_01_opticat.fit(list(raws.values()))  # ICA mit Opticat
-    else:
-        ica_model, labels = s_01_ica.fit(list(raws.values())) # normales ICA
+    ica_model, labels = s_01_ica.fit(list(raws.values()))
 
     # 3. Auf jeden Run einzeln anwenden
     cleaned = {run: ica_model.apply(raw.copy()) for run, raw in raws.items()}

@@ -107,12 +107,109 @@ def plot_ica_components(ica, labels):
     plt.tight_layout()
     plt.show()
 
+# prepare data for OptiCAT
+def prepare_opticat_data(raw, raw_ica=None):
+
+    # Prepare EEG data if not already prepared
+    if raw_ica is None:
+        raw_ica = prepare_ica_data(raw)
+
+    data = raw_ica.get_data()
+    n_times = data.shape[1]
+    sfreq = raw.info["sfreq"]
+
+    # Extract saccade events
+    if f"ET_Saccade {config.eye}" in raw.annotations.description:
+        events, _ = mne.events_from_annotations(
+            raw,
+            event_id={f"ET_Saccade {config.eye}": 1},
+            verbose=False
+        )
+    else:
+        events = np.empty((0, 3), dtype=int)
+
+    # Convert event positions to indices relative to the beginning of the data
+    saccade_samples = events[:, 0] - raw.first_samp
+
+    # Convert time window to samples
+    start_offset = int(round(config.saccade_window[0] * sfreq))
+    stop_offset = int(round(config.saccade_window[1] * sfreq))
+
+    windows = []
+
+    for sample in saccade_samples:
+
+        start = sample + start_offset
+        stop = sample + stop_offset + 1
+
+        # Ignore windows outside the recording
+        if start < 0 or stop > n_times:
+            continue
+
+        window = data[:, start:stop].copy()
+
+        # Remove temporal mean of each epoch
+        if config.remove_epochmean:
+            window -= window.mean(axis=1, keepdims=True)
+
+        windows.append(window)
+
+    # Append saccade intervals to continuous data
+    if config.ow_factor > 0 and len(windows) > 0:
+
+        saccade_data = np.concatenate(windows, axis=1)
+
+        target_samples = int(round(config.ow_factor * n_times))
+
+        if target_samples > 0:
+
+            repetitions = int(np.ceil(
+                target_samples / saccade_data.shape[1]
+            ))
+
+            repeated = np.tile(saccade_data, (1, repetitions))
+
+            saccade_data = repeated[:, :target_samples]
+
+            augmented_data = np.concatenate(
+                [data, saccade_data],
+                axis=1
+            )
+
+        else:
+            augmented_data = data.copy()
+
+    else:
+        print("No valid saccade windows found. Using original data.")
+        augmented_data = data.copy()
+
+    # Create RawArray for ICA fitting
+    raw_augmented = mne.io.RawArray(
+        augmented_data,
+        raw_ica.info.copy(),
+        verbose=False
+    )
+
+    print(f"OptiCAT: Original samples: {n_times}")
+    print(f"OptiCAT: Added samples: {augmented_data.shape[1] - n_times}")
+    print(f"OptiCAT: Total samples: {augmented_data.shape[1]}")
+
+    return raw_augmented
+
 # main function to do ICA and return cleaned data
 def ica(raw):
     raw_ica = prepare_ica_data(raw)
-    ica = get_ica(raw_ica)
 
-    ica.fit(raw_ica)
+    # ica if enabled
+    if config.opticat:
+        print("Using OptiCAT for ICA fitting.")
+        raw_fit = prepare_opticat_data(raw, raw_ica)
+    else:
+        print("Using standard ICA.")
+        raw_fit = raw_ica
+
+    ica = get_ica(raw_fit)
+    ica.fit(raw_fit)
 
     labels = label_components_ica(raw_ica, ica)
 
@@ -149,9 +246,17 @@ def fit(raws):
     raw_all = mne.concatenate_raws([raw.copy() for raw in raws])
 
     raw_ica = prepare_ica_data(raw_all)
-    ica = get_ica(raw_ica)
 
-    ica.fit(raw_ica)
+    # ica if enabled
+    if config.opticat:
+        print("Using OptiCAT for ICA fitting.")
+        raw_fit = prepare_opticat_data(raw_all, raw_ica)
+    else:
+        print("Using standard ICA.")
+        raw_fit = raw_ica
+
+    ica = get_ica(raw_fit)
+    ica.fit(raw_fit)
 
     labels = label_components_ica(raw_ica, ica)
     exclude_components(ica, labels)
