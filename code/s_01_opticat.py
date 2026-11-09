@@ -76,7 +76,7 @@ def opticat(raw):
     
     excluded_components = [
             idx for idx, lbl in enumerate(labels['labels'])
-            if lbl not in ['brain', 'other'] and labels['y_pred_proba'][idx] >= 0.8]
+            if lbl not in ['brain', 'other'] and labels['y_pred_proba'][idx].max() >= 0.8]
     ica_opticat.exclude = excluded_components
 
     # apply to original data
@@ -154,7 +154,7 @@ def fit(raws):
     ica_opticat = mne.preprocessing.ICA(
             n_components=len(mne.pick_types(info, eeg=True)),
             #method="infomax",
-            method="jamica", # combine opticat + jamica
+            method=config.ica, # combine opticat + jamica
             max_iter="auto",
             random_state=97,
             verbose=False)
