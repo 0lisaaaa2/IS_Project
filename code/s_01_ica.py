@@ -110,10 +110,6 @@ def plot_ica_components(ica, labels):
 # prepare data for OptiCAT. amount of additional saccade data is defined by config.ow_factor
 def prepare_opticat_data(raw, raw_ica=None):
 
-    # # Prepare EEG data if not already prepared
-    # if raw_ica is None:
-    #     raw_ica = prepare_ica_data(raw)
-
     data = raw_ica.get_data()
     n_times = data.shape[1]
     sfreq = raw.info["sfreq"]
@@ -187,44 +183,13 @@ def prepare_opticat_data(raw, raw_ica=None):
 
     return raw_augmented
 
-# # function to perform ICA and return cleaned data
-# def ica(raw):
-#     raw_ica = prepare_ica_data(raw)
 
-#     # select data used to fit. usage of Opitcat is defined in config.py
-#     if config.opticat:
-#         print("Using OptiCAT for ICA fitting.")
-#         raw_fit = prepare_opticat_data(raw, raw_ica)
-#     else:
-#         print("Using standard ICA.")
-#         raw_fit = raw_ica
-
-#     ica = get_ica(raw_fit)
-#     ica.fit(raw_fit)
-
-#     labels = label_components_ica(raw_ica, ica)
-
-#     # show time series of ICs
-#     # ica.plot_sources(raw, show_scrollbars=True, show=True)
-#     # ica.plot_components()
-
-#     # Plot ICA components with ICLabel classification
-#     plot_ica_components(ica, labels)
-
-#     # Exclude components
-#     exclude_components(ica, labels)
-#     n_excluded = len(ica.exclude)
-
-#     # apply ica results to original data
-#     raw_cleaned = ica.apply(raw.copy())
-#     return raw_cleaned, n_excluded, ica, labels
-
-# neue jamica version
+# neue jamica version mit do_reject 
 def fit_ica_model(raw_fit):
     if config.ica == "jamica":
         ica = fit_ica(
             raw_fit,
-            n_components=None,      # None = Rang der Daten (siehe unten)
+            n_components=None,
             max_iter=2000,
             random_state=97,
             fit_params=dict(do_reject=True, rejsig=3.0,
@@ -265,15 +230,18 @@ def fit(raws):
         print("Using standard ICA.")
         raw_fit = raw_ica
 
-    # ica = get_ica(raw_fit)
-    # ica.fit(raw_fit)
-    ica = fit_ica_model(raw_fit)
+    # fit ICA model (jamica or infomax)
+    if config.ica == "jamica":
+        ica = fit_ica_model(raw_fit)
+    else:
+        ica = get_ica(raw_fit)
+        ica.fit(raw_fit)
 
     labels = label_components_ica(raw_ica, ica)
     exclude_components(ica, labels)
     
     # plot ica results and label components
-    ica.plot_sources(raw_ica, show_scrollbars=True, show=True)
+    ica.plot_sources(raw_ica, show_scrollbars=True, show=True) #doenst work?
     plot_ica_components(ica, labels)
 
     return ica, labels
