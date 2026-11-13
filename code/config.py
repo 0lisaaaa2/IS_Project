@@ -14,6 +14,8 @@ electrode = "E71" # above left eye
 highpass = 2.0 # change to 2.0
 eye="L"
 
+reuse_ica = True    # True: gespeicherte ICA laden, falls vorhanden. False: immer neu fitten
+
 # Welches ICA möchtest du verwenden?
 opticat = True # (True | False)
 ica = "jamica" # ("infomax" | "jamica")
