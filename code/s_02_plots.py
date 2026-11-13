@@ -21,7 +21,7 @@ def get_info(raw):
 """
 Plot small, medium und large saccades for several runs.
 """
-def plot_saccade_frps_raw_runs(runs):
+def plot_saccade_frps_raw_runs(plot_title, runs):
     tmin, tmax = -0.3, 0.5
     electrode = config.electrode
     baseline = (tmin, 0)
@@ -155,7 +155,7 @@ def plot_saccade_frps_raw_runs(runs):
     axes[2].set_xlim(tmin, tmax)
 
     fig.suptitle(
-        f"FRPs über bereinigte Runs – Elektrode {electrode}",
+        f"{plot_title} – Elektrode {electrode}",
         fontsize=14
     )
 
