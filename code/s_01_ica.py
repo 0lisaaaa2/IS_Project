@@ -1,4 +1,5 @@
 import mne
+from mne import Annotations
 from mne_icalabel import label_components
 import config
 import numpy as np
@@ -51,14 +52,38 @@ def label_components_ica(raw, ica):
 
 
 # exclude components that are not brain or other with a probability of at least 0.8
-def exclude_components(ica, labels):
-    excluded_components = [
-        idx for idx, lbl in enumerate(labels['labels'])
-        if lbl not in ['brain', 'other']
-        and labels['y_pred_proba'][idx].max() >= 0.8
-    ]
-    print(f"Excluding components: {excluded_components}")
-    ica.exclude = excluded_components
+#def exclude_components(ica, labels):
+#    excluded_components = [
+#        idx for idx, lbl in enumerate(labels['labels'])
+#        if lbl not in ['brain', 'other']
+#        and labels['y_pred_proba'][idx].max() >= 0.8
+#    ]
+#    print(f"Excluding components: {excluded_components}")
+#    ica.exclude = excluded_components
+
+def exclude_components(ica, labels, ratios=None):
+    mode = "both"
+
+    # ocular ICs from the eye-tracker-based criterion
+    ocular = []
+    if mode in ("varratio", "both"):
+        ocular = np.flatnonzero(ratios > config.varratio_threshold).tolist()
+
+    # ICLabel
+    iclabel_excl = []
+    if mode in ("iclabel", "both"):
+        # in "both" mode ICLabel's eye class is left to the variance ratio
+        skip = ['brain', 'other'] + (['eye blink'] if mode == "both" else [])
+        iclabel_excl = [
+            idx for idx, lbl in enumerate(labels['labels'])
+            if lbl not in skip and labels['y_pred_proba'][idx].max() >= 0.8
+        ]
+
+    excluded = sorted(set(ocular) | set(iclabel_excl))
+    print(f"Variance-ratio (ocular) ICs: {ocular}")
+    print(f"ICLabel ICs:                 {iclabel_excl}")
+    print(f"Excluding components:        {excluded}")
+    ica.exclude = excluded
 
 # plot topographies of ICA components
 def plot_ica_components(ica, labels):
@@ -187,38 +212,6 @@ def prepare_opticat_data(raw, raw_ica=None):
 
     return raw_augmented
 
-# # function to perform ICA and return cleaned data
-# def ica(raw):
-#     raw_ica = prepare_ica_data(raw)
-
-#     # select data used to fit. usage of Opitcat is defined in config.py
-#     if config.opticat:
-#         print("Using OptiCAT for ICA fitting.")
-#         raw_fit = prepare_opticat_data(raw, raw_ica)
-#     else:
-#         print("Using standard ICA.")
-#         raw_fit = raw_ica
-
-#     ica = get_ica(raw_fit)
-#     ica.fit(raw_fit)
-
-#     labels = label_components_ica(raw_ica, ica)
-
-#     # show time series of ICs
-#     # ica.plot_sources(raw, show_scrollbars=True, show=True)
-#     # ica.plot_components()
-
-#     # Plot ICA components with ICLabel classification
-#     plot_ica_components(ica, labels)
-
-#     # Exclude components
-#     exclude_components(ica, labels)
-#     n_excluded = len(ica.exclude)
-
-#     # apply ica results to original data
-#     raw_cleaned = ica.apply(raw.copy())
-#     return raw_cleaned, n_excluded, ica, labels
-
 # neue jamica version
 def fit_ica_model(raw_fit):
     if config.ica == "jamica":
@@ -248,6 +241,72 @@ def unify_bads(raws):
     print(f"Bad channels (union over all runs): {all_bads}")
     return all_bads
 
+# Helpfunction for variance ratio (start and duration of intervalls)
+def get_saccade_start_and_duration(raw, description):
+    annotations = raw.annotations
+    select = annotations.description == description
+
+    #fallback if no annotations match
+    if not select.any():
+        return np.array([], dtype=int), np.array([], dtype=int)
+
+    events, _ = mne.events_from_annotations(raw, event_id={description: 1}, verbose=False) #annotation into real events
+    starts = events[:, 0] - raw.first_samp #start of intervall
+
+    durations = np.round(annotations.duration[select] * raw.info["sfreq"]).astype(int) #durration of intervall
+
+    #fallbacks if lists have different number of items
+    if len(durations) != len(starts):
+        durs = np.full(len(starts), int(round(0.03 * raw.info["sfreq"])))
+
+    return starts, durations
+
+
+def get_variants_ratio(raw, ica):
+    sfreq = raw.info["sfreq"]
+    n_times = raw.n_times
+    pre = int(round(config.varratio_pre * sfreq))
+    post = int(round(config.varratio_post * sfreq))
+    sources = ica.get_sources(raw).get_data()
+
+    # saccade mask
+    sac_mask = np.zeros(n_times, dtype=bool)
+    starts, durations = get_saccade_start_and_duration(raw, f"ET_Saccade {config.eye}")
+    for s, d in zip(starts, durations):
+        a = max(s - pre, 0)
+        b = min(s + d + post +1, n_times)
+        sac_mask[a:b] = True
+
+
+    # no fixations or saccades (blinks and bad segments)
+    excl_mask = np.zeros(n_times, dtype=bool)
+    annotations = raw.annotations
+    for desc in np.unique(annotations.description):
+        if any(k in desc.lower() for k in ("blink", "bad")):
+            starts, durations = get_saccade_start_and_duration(raw, desc)
+            for s, d in zip(starts, durations):
+                excl_mask[max(s, 0):min(s + d + 1, n_times)] = True
+
+    # fixation mask
+    fix_mask = ~sac_mask & excl_mask
+
+    # gets variance from saccades and fixations and calcs difference
+    var_sac = sources[:, sac_mask].var(axis=1)
+    var_fix = sources[:, fix_mask].var(axis=1)
+    return var_sac/var_fix
+
+def plot_variance_ratios(ratios):
+    fig, ax = plt.subplots(figsize=(6, 3))
+    ax.bar(range(len(ratios)), ratios)
+    ax.axhline(config.varratio_threshold, color="r", ls="--",
+               label=f"threshold = {config.varratio_threshold}")
+    ax.set_yscale("log")
+    ax.set_xlabel("IC")
+    ax.set_ylabel("var(sac) / var(fix)")
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
+
 
 # fit ONE ICA on all runs together; apply it later to each run separately
 def fit(raws):
@@ -270,7 +329,13 @@ def fit(raws):
     ica = fit_ica_model(raw_fit)
 
     labels = label_components_ica(raw_ica, ica)
-    exclude_components(ica, labels)
+
+    # eye-tracker-based variance ratio on the original concated data
+    ratios = get_variants_ratio(raw_all, ica)
+    labels["variance_ratio"] = ratios
+    plot_variance_ratios(ratios)
+
+    exclude_components(ica, labels, ratios)
     
     # plot ica results and label components
     ica.plot_sources(raw_ica, show_scrollbars=True, show=True)

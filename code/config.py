@@ -7,8 +7,8 @@ results_dir = PROJECT_ROOT / "results"
 
 subject = "NDARNA421FL7" #( "NDARHT518WEM" | "NDARNA421FL7")
 task = "allTasks"
-#runs = ["1", "2", "3", "4", "5", "7", "8"] #6 ist komisch, deswegen nicht drin
-runs = ["2"]
+runs = ["1", "2", "3", "4", "5", "7", "8"] #6 ist komisch, deswegen nicht drin
+#runs = ["2"]
 electrode = "E71" # above left eye 
 #processing = "eyelink"
 highpass = 2.0 # change to 2.0
@@ -25,3 +25,8 @@ saccade_window = (-0.020, 0.010)
 # Zeiten um Blinks, die markiert verden
 blink_pre_ms =50
 blink_post_ms = 100
+
+# Varianz-Kriterium
+varratio_threshold = 1.1
+varratio_pre = 0.010
+varratio_post = 0.00
