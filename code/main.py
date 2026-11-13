@@ -22,9 +22,8 @@ def extended_pipeline():
     # 3. Auf jeden Run einzeln anwenden
     cleaned = {run: ica_model.apply(raw.copy()) for run, raw in raws.items()}
 
-    # 4. FRPs
-    s_02_plots.plot_saccade_frps_raw_runs("FRPs über bereinigte Runs",
-        [(f"Run {r}", raw) for r, raw in cleaned.items()])
+    # 4. Plots
+    s_02_plots.main(raws, cleaned)
 
 if __name__ == "__main__":
     extended_pipeline()

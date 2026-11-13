@@ -32,3 +32,11 @@ blink_post_ms = 100
 varratio_threshold = 1.1
 varratio_pre = 0.010
 varratio_post = 0.00
+
+# Plots
+saccade_topomaps_raw = False
+saccade_topomaps_cleaned = False
+components_plot = False
+frp_plot_raw = False
+frp_plot_cleaned = True
+

@@ -123,10 +123,6 @@ def plot_ica_components(ica, labels):
 # prepare data for OptiCAT. amount of additional saccade data is defined by config.ow_factor
 def prepare_opticat_data(raw, raw_ica=None):
 
-    # # Prepare EEG data if not already prepared
-    # if raw_ica is None:
-    #     raw_ica = prepare_ica_data(raw)
-
     data = raw_ica.get_data()
     n_times = data.shape[1]
     sfreq = raw.info["sfreq"]
@@ -328,7 +324,8 @@ def fit(raws):
     exclude_components(ica, labels, ratios)
     
     # plot ica results and label components
-    #ica.plot_sources(raw_ica, show_scrollbars=True, show=True)
-    #plot_ica_components(ica, labels)
+    if config.components_plot:
+        ica.plot_sources(raw_ica, show_scrollbars=True, show=True)
+        plot_ica_components(ica, labels)
 
     return ica, labels
