@@ -3,22 +3,22 @@ from mne_icalabel import label_components
 import config
 import numpy as np
 import matplotlib.pyplot as plt
+from jamica import fit_ica
 
 """
 Applies ICA to the raw EEG data, identifies and excludes "bad" components, and returns the cleaned data.
+Optionally performs Opticat augmentation before ICA fitting. 
 """
-
-
 
 # get copy of EEG data and prepare it for ICA
 def prepare_ica_data(raw):
-    # Use EEG channels only; exclude channels already marked as bad.
+    # Use EEG channels only; exclude channels already marked as bad
     raw_ica = raw.copy().pick(
         picks=["eeg"],
         exclude="bads",
     )
 
-    # Reduce slow drifts before ICA fitting.
+    # Reduce slow drifts by high-pass filtering before ICA fitting
     raw_ica.filter(
         l_freq=config.highpass,
         h_freq=None,
@@ -31,7 +31,7 @@ def prepare_ica_data(raw):
     return raw_ica
 
 
-# set ICA to use for fitting
+# set ICA to use for fitting. method is defined in config.py
 def get_ica(raw):
     ica = mne.preprocessing.ICA(
         n_components=len(mne.pick_types(raw.info, eeg=True)), 
@@ -60,7 +60,7 @@ def exclude_components(ica, labels):
     print(f"Excluding components: {excluded_components}")
     ica.exclude = excluded_components
 
-
+# plot topographies of ICA components
 def plot_ica_components(ica, labels):
 
     n_components = ica.n_components_
@@ -107,12 +107,12 @@ def plot_ica_components(ica, labels):
     plt.tight_layout()
     plt.show()
 
-# prepare data for OptiCAT
+# prepare data for OptiCAT. amount of additional saccade data is defined by config.ow_factor
 def prepare_opticat_data(raw, raw_ica=None):
 
-    # Prepare EEG data if not already prepared
-    if raw_ica is None:
-        raw_ica = prepare_ica_data(raw)
+    # # Prepare EEG data if not already prepared
+    # if raw_ica is None:
+    #     raw_ica = prepare_ica_data(raw)
 
     data = raw_ica.get_data()
     n_times = data.shape[1]
@@ -131,7 +131,7 @@ def prepare_opticat_data(raw, raw_ica=None):
     # Convert event positions to indices relative to the beginning of the data
     saccade_samples = events[:, 0] - raw.first_samp
 
-    # Convert time window to samples
+    # Convert time window from seconds to samples
     start_offset = int(round(config.saccade_window[0] * sfreq))
     stop_offset = int(round(config.saccade_window[1] * sfreq))
 
@@ -157,24 +157,15 @@ def prepare_opticat_data(raw, raw_ica=None):
     # Append saccade intervals to continuous data
     if config.ow_factor > 0 and len(windows) > 0:
 
+        # combine all extracted saccade windows into one array
         saccade_data = np.concatenate(windows, axis=1)
-
         target_samples = int(round(config.ow_factor * n_times))
 
         if target_samples > 0:
-
-            repetitions = int(np.ceil(
-                target_samples / saccade_data.shape[1]
-            ))
-
+            repetitions = int(np.ceil(target_samples / saccade_data.shape[1]))
             repeated = np.tile(saccade_data, (1, repetitions))
-
             saccade_data = repeated[:, :target_samples]
-
-            augmented_data = np.concatenate(
-                [data, saccade_data],
-                axis=1
-            )
+            augmented_data = np.concatenate([data, saccade_data], axis=1) # concatenate orignal and additonal saccade data
 
         else:
             augmented_data = data.copy()
@@ -183,7 +174,7 @@ def prepare_opticat_data(raw, raw_ica=None):
         print("No valid saccade windows found. Using original data.")
         augmented_data = data.copy()
 
-    # Create RawArray for ICA fitting
+    # Create Raw object containing augemented data for ica fitting
     raw_augmented = mne.io.RawArray(
         augmented_data,
         raw_ica.info.copy(),
@@ -196,36 +187,56 @@ def prepare_opticat_data(raw, raw_ica=None):
 
     return raw_augmented
 
-# main function to do ICA and return cleaned data
-def ica(raw):
-    raw_ica = prepare_ica_data(raw)
+# # function to perform ICA and return cleaned data
+# def ica(raw):
+#     raw_ica = prepare_ica_data(raw)
 
-    # ica if enabled
-    if config.opticat:
-        print("Using OptiCAT for ICA fitting.")
-        raw_fit = prepare_opticat_data(raw, raw_ica)
+#     # select data used to fit. usage of Opitcat is defined in config.py
+#     if config.opticat:
+#         print("Using OptiCAT for ICA fitting.")
+#         raw_fit = prepare_opticat_data(raw, raw_ica)
+#     else:
+#         print("Using standard ICA.")
+#         raw_fit = raw_ica
+
+#     ica = get_ica(raw_fit)
+#     ica.fit(raw_fit)
+
+#     labels = label_components_ica(raw_ica, ica)
+
+#     # show time series of ICs
+#     # ica.plot_sources(raw, show_scrollbars=True, show=True)
+#     # ica.plot_components()
+
+#     # Plot ICA components with ICLabel classification
+#     plot_ica_components(ica, labels)
+
+#     # Exclude components
+#     exclude_components(ica, labels)
+#     n_excluded = len(ica.exclude)
+
+#     # apply ica results to original data
+#     raw_cleaned = ica.apply(raw.copy())
+#     return raw_cleaned, n_excluded, ica, labels
+
+# neue jamica version
+def fit_ica_model(raw_fit):
+    if config.ica == "jamica":
+        ica = fit_ica(
+            raw_fit,
+            n_components=None,      # None = Rang der Daten (siehe unten)
+            max_iter=2000,
+            random_state=97,
+            fit_params=dict(do_reject=True, rejsig=3.0,
+                            rejstart=2, rejint=3, numrej=5),
+        )
+        res = ica.amica_result_
+        print(f"AMICA do_reject: {res.n_rejected_} Samples verworfen "
+              f"({res.n_rejected_ / raw_fit.n_times:.1%})")
     else:
-        print("Using standard ICA.")
-        raw_fit = raw_ica
-
-    ica = get_ica(raw_fit)
-    ica.fit(raw_fit)
-
-    labels = label_components_ica(raw_ica, ica)
-
-    # show time series of ICs
-    # ica.plot_sources(raw, show_scrollbars=True, show=True)
-    #ica.plot_components()
-
-    # Plot ICA components with ICLabel classification
-    plot_ica_components(ica, labels)
-
-    # Exclude components
-    exclude_components(ica, labels)
-    n_excluded = len(ica.exclude)
-    raw_cleaned = ica.apply(raw.copy())
-    return raw_cleaned, n_excluded, ica, labels
-
+        ica = get_ica(raw_fit)
+        ica.fit(raw_fit)
+    return ica
 
 
 # set the same bad channels in all runs (union), so that one ICA fits all runs
@@ -244,10 +255,9 @@ def fit(raws):
 
     # concatenate copies (concatenate_raws changes the first raw in place)
     raw_all = mne.concatenate_raws([raw.copy() for raw in raws])
-
     raw_ica = prepare_ica_data(raw_all)
 
-    # ica if enabled
+    # select data used to fit. usage of Opitcat is defined in config.py
     if config.opticat:
         print("Using OptiCAT for ICA fitting.")
         raw_fit = prepare_opticat_data(raw_all, raw_ica)
@@ -255,10 +265,15 @@ def fit(raws):
         print("Using standard ICA.")
         raw_fit = raw_ica
 
-    ica = get_ica(raw_fit)
-    ica.fit(raw_fit)
+    # ica = get_ica(raw_fit)
+    # ica.fit(raw_fit)
+    ica = fit_ica_model(raw_fit)
 
     labels = label_components_ica(raw_ica, ica)
     exclude_components(ica, labels)
+    
+    # plot ica results and label components
+    ica.plot_sources(raw_ica, show_scrollbars=True, show=True)
+    plot_ica_components(ica, labels)
 
     return ica, labels

@@ -9,14 +9,14 @@ subject = "NDARHT518WEM"
 task = "allTasks"
 #runs = ["1", "2", "3", "4", "5", "7", "8"] #6 ist komisch, deswegen nicht drin
 runs = ["2"]
-electrode = "E25" # above left eye 
+electrode = "E71" # above left eye 
 #processing = "eyelink"
 highpass = 2.0 # change to 2.0
 eye="L"
 
 # Welches ICA möchtest du verwenden?
-opticat = False # (True | False)
-ica = "infomax" # ("infomax" | "jamica")
+opticat = True # (True | False)
+ica = "jamica" # ("infomax" | "jamica")
 # OptiCAT settings
 ow_factor = 1
 remove_epochmean = True
