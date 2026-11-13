@@ -5,7 +5,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent   # code/ → IS_Project/
 bids_root = PROJECT_ROOT / "data"
 results_dir = PROJECT_ROOT / "results"
 
-subject = "NDARHT518WEM"
+subject = "NDARNA421FL7" #( "NDARHT518WEM" | "NDARNA421FL7")
 task = "allTasks"
 #runs = ["1", "2", "3", "4", "5", "7", "8"] #6 ist komisch, deswegen nicht drin
 runs = ["2"]
@@ -15,8 +15,8 @@ highpass = 2.0 # change to 2.0
 eye="L"
 
 # Welches ICA möchtest du verwenden?
-opticat = False # (True | False)
-ica = "infomax" # ("infomax" | "jamica")
+opticat = True # (True | False)
+ica = "jamica" # ("infomax" | "jamica")
 # OptiCAT settings
 ow_factor = 1
 remove_epochmean = True
