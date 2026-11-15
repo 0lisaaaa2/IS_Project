@@ -5,14 +5,16 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent   # code/ → IS_Project/
 bids_root = PROJECT_ROOT / "data"
 results_dir = PROJECT_ROOT / "results"
 
-subject = "NDARNA421FL7" #( "NDARHT518WEM" | "NDARNA421FL7")
+subject = "NDARHT518WEM" #( "NDARHT518WEM" | "NDARNA421FL7")
 task = "allTasks"
-#runs = ["1", "2", "3", "4", "5", "7", "8"] #6 ist komisch, deswegen nicht drin
-runs = ["2"]
-electrode = "E25" # above left eye 
+runs = ["1", "2", "3", "4", "5", "7", "8"] #6 ist komisch, deswegen nicht drin
+#runs = ["2"]
+electrode = "E25" # above left eye
 #processing = "eyelink"
 highpass = 2.0 # change to 2.0
 eye="L"
+
+reuse_ica = True    # True: gespeicherte ICA laden, falls vorhanden. False: immer neu fitten
 
 # Welches ICA möchtest du verwenden?
 opticat = True # (True | False)
@@ -25,3 +27,16 @@ saccade_window = (-0.020, 0.010)
 # Zeiten um Blinks, die markiert verden
 blink_pre_ms =50
 blink_post_ms = 100
+
+# Varianz-Kriterium
+varratio_threshold = 1.1
+varratio_pre = 0.010
+varratio_post = 0.00
+
+# Plots (Wähle welche angezeigt werden sollen)
+saccade_topomaps_raw = False
+saccade_topomaps_cleaned = False
+components_plot = False
+frp_plot_raw = False
+frp_plot_cleaned = True
+

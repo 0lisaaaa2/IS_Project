@@ -1,4 +1,5 @@
 import mne
+from mne import Annotations
 from mne_icalabel import label_components
 import config
 import numpy as np
@@ -49,16 +50,28 @@ def label_components_ica(raw, ica):
     print(labels)
     return labels
 
+def exclude_components(ica, labels, ratios=None):
+    mode = "both"
 
-# exclude components that are not brain or other with a probability of at least 0.8
-def exclude_components(ica, labels):
-    excluded_components = [
-        idx for idx, lbl in enumerate(labels['labels'])
-        if lbl not in ['brain', 'other']
-        and labels['y_pred_proba'][idx].max() >= 0.8
-    ]
-    print(f"Excluding components: {excluded_components}")
-    ica.exclude = excluded_components
+    # ocular ICs from the eye-tracker-based criterion
+    ocular = []
+    if mode in ("varratio", "both"):
+        ocular = np.flatnonzero(ratios > config.varratio_threshold).tolist()
+
+    # ICLabel
+    iclabel_excl = []
+    if mode in ("iclabel", "both"):
+        skip = ['brain', 'other']
+        iclabel_excl = [
+            idx for idx, lbl in enumerate(labels['labels'])
+            if lbl not in skip and labels['y_pred_proba'][idx].max() >= 0.8
+        ]
+
+    excluded = sorted(set(ocular) | set(iclabel_excl))
+    print(f"Variance-ratio (ocular) ICs: {ocular}")
+    print(f"ICLabel ICs:                 {iclabel_excl}")
+    print(f"Excluding components:        {excluded}")
+    ica.exclude = excluded
 
 # plot topographies of ICA components
 def plot_ica_components(ica, labels):
@@ -213,6 +226,65 @@ def unify_bads(raws):
     print(f"Bad channels (union over all runs): {all_bads}")
     return all_bads
 
+# Helpfunction for variance ratio (start and duration of intervalls)
+def get_saccade_start_and_duration(raw, description):
+    annotations = raw.annotations
+    select = annotations.description == description
+    sfreq = raw.info["sfreq"]
+
+    #fallback if no annotations match
+    if not select.any():
+        return np.array([], dtype=int), np.array([], dtype=int)
+
+    starts = np.round((annotations.onset[select] - raw.first_time) * sfreq).astype(int)
+    durations = np.round(annotations.duration[select] * sfreq).astype(int)
+
+    return starts, durations
+
+
+def get_variants_ratio(raw, ica):
+    sfreq = raw.info["sfreq"]
+    n_times = raw.n_times
+    pre = int(round(config.varratio_pre * sfreq))
+    post = int(round(config.varratio_post * sfreq))
+    sources = ica.get_sources(raw).get_data()      # (n_ICs, n_times)
+
+    # Sakkaden: Fenster um pre/post VERLÄNGERN
+    var_sac_list = []
+    starts, durations = get_saccade_start_and_duration(raw, f"ET_Saccade {config.eye}")
+    for s, d in zip(starts, durations):
+        a = max(s - pre, 0)
+        b = min(s + d + post, n_times)
+        if b - a > 1:
+            var_sac_list.append(sources[:, a:b].var(axis=1, ddof=1))
+
+    # Fixationen: Fenster um pre/post KÜRZEN
+    var_fix_list = []
+    starts, durations = get_saccade_start_and_duration(raw, f"ET_Fixation {config.eye}")
+    for s, d in zip(starts, durations):
+        a = s + post              # Anfang: was die Sakkade davor nach hinten verlängert hat
+        b = s + d - pre           # Ende: was die nächste Sakkade nach vorne verlängert hat
+        if a >= 0 and b <= n_times and b - a > 2:
+            var_fix_list.append(sources[:, a:b].var(axis=1, ddof=1))
+
+    # Listen -> ein Mittelwert pro IC
+    var_sac = np.mean(var_sac_list, axis=0)
+    var_fix = np.mean(var_fix_list, axis=0)
+    print(f"Varianz-Kriterium: {len(var_sac_list)} Sakkaden, {len(var_fix_list)} Fixationen")
+    return var_sac / var_fix
+
+def plot_variance_ratios(ratios):
+    fig, ax = plt.subplots(figsize=(6, 3))
+    ax.bar(range(len(ratios)), ratios)
+    ax.axhline(config.varratio_threshold, color="r", ls="--",
+               label=f"threshold = {config.varratio_threshold}")
+    ax.set_yscale("log")
+    ax.set_xlabel("IC")
+    ax.set_ylabel("var(sac) / var(fix)")
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
+
 
 # fit ONE ICA on all runs together; apply it later to each run separately
 def fit(raws):
@@ -230,18 +302,31 @@ def fit(raws):
         print("Using standard ICA.")
         raw_fit = raw_ica
 
-    # fit ICA model (jamica or infomax)
-    if config.ica == "jamica":
-        ica = fit_ica_model(raw_fit)
+    #ICA wird nur neu gefittet, wenn keine Datei in results ist, oder das in der config auf False steht
+    config.results_dir.mkdir(exist_ok=True)
+    ica_path = config.results_dir / f"sub-{config.subject}_{config.ica}_opticat-{config.opticat}_ica.fif"
+    if config.reuse_ica and ica_path.exists():
+        print(f"Lade gespeicherte ICA: {ica_path.name}")
+        ica = mne.preprocessing.read_ica(ica_path)
     else:
-        ica = get_ica(raw_fit)
-        ica.fit(raw_fit)
+        ica = fit_ica_model(raw_fit)
+        try:
+            ica.save(ica_path, overwrite=True)
+        except Exception as e:
+            print(f"WARNUNG: ICA konnte nicht gespeichert werden: {e}")
 
     labels = label_components_ica(raw_ica, ica)
-    exclude_components(ica, labels)
+
+    # eye-tracker-based variance ratio on the original concated data
+    ratios = get_variants_ratio(raw_all, ica)
+    labels["variance_ratio"] = ratios
+    plot_variance_ratios(ratios)
+
+    exclude_components(ica, labels, ratios)
     
     # plot ica results and label components
-    ica.plot_sources(raw_ica, show_scrollbars=True, show=True) #doenst work?
-    plot_ica_components(ica, labels)
+    if config.components_plot:
+        ica.plot_sources(raw_ica, show_scrollbars=True, show=True)
+        plot_ica_components(ica, labels)
 
     return ica, labels

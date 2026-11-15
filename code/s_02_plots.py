@@ -3,21 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import mne
 
-
-def get_info(raw):
-    df = raw.annotations.to_data_frame(time_format=None)
-
-    saccades = df.loc[
-        df["description"].eq("ET_Saccade L"),
-        ["onset", "Amplitude"]
-    ].dropna(subset=["Amplitude"])
-
-    large = saccades[saccades["Amplitude"] >= 10]
-    small = saccades[saccades["Amplitude"] <= 2]
-
-    return large, small
-
-
 """
 Plot small, medium und large saccades for several runs.
 """
@@ -40,35 +25,8 @@ def plot_saccade_frps_raw_runs(plot_title, runs):
     ]
 
     for run_label, raw in runs:
-        df = raw.annotations.to_data_frame(time_format=None)
-
-        saccades = df.loc[
-            df["description"].eq("ET_Saccade L"),
-            ["onset", "Amplitude"]
-        ].dropna(subset=["Amplitude"])
-
-        blink_windows = [(a["onset"], a["onset"] + a["duration"])
-                         for a in raw.annotations
-                         if a["description"].startswith("ET_bad_blink")]
-
-        near_blink = saccades["onset"].apply(
-            lambda t: any(s <= t <= e for s, e in blink_windows))
-        print(f"{run_label}: {near_blink.sum()} Sakkaden im Blink-Fenster ausgeschlossen")
-        saccades = saccades[~near_blink]
-
-        # Sakkaden nach Amplitude aufteilen
-        small = saccades[saccades["Amplitude"] <= 2]
-        medium = saccades[
-            (saccades["Amplitude"] > 2)
-            & (saccades["Amplitude"] < 10)
-        ]
-        large = saccades[saccades["Amplitude"] >= 10]
-
-        saccade_groups = {
-            "small": small,
-            "medium": medium,
-            "large": large,
-        }
+        # Sakkaden ohne Blink-Fenster, nach Amplitude aufgeteilt
+        saccade_groups = get_saccade_groups(raw)
 
         for group, title, ax in groups:
             saccades_group = saccade_groups[group]
@@ -162,7 +120,22 @@ def plot_saccade_frps_raw_runs(plot_title, runs):
     fig.tight_layout(rect=[0, 0, 1, 0.97])
     plt.show()
 
+def get_saccade_groups(raw):
+    df = raw.annotations.to_data_frame(time_format=None)
+    sac = df.loc[df["description"].eq(f"ET_Saccade {config.eye}"),
+                 ["onset", "Amplitude"]].dropna(subset=["Amplitude"])
 
+    blink_windows = [(a["onset"], a["onset"] + a["duration"])
+                     for a in raw.annotations
+                     if a["description"].startswith("ET_bad_blink")]
+    near_blink = sac["onset"].apply(lambda t: any(s <= t <= e for s, e in blink_windows))
+    sac = sac[~near_blink]
+
+    return {
+        "small":  sac[sac["Amplitude"] <= 2],
+        "medium": sac[(sac["Amplitude"] > 2) & (sac["Amplitude"] < 10)],
+        "large":  sac[sac["Amplitude"] >= 10],
+    }
 
 
 """
@@ -283,9 +256,23 @@ def plot_saccade_topomaps(raw, saccades, title="Sakkaden"):
 
     plt.show()
 
+def _label_runs(raws):
+    return [(f"Run {r}", raw) for r, raw in raws.items()]
 
+def _topomaps(raws, label):
+    # Kopien, weil concatenate_raws das erste Raw in-place verändert
+    raw_all = mne.concatenate_raws([r.copy() for r in raws.values()])
+    groups = get_saccade_groups(raw_all)
+    plot_saccade_topomaps(raw_all, groups["small"], title=f"Kleine Sakkaden (≤ 2°) – {label}")
+    plot_saccade_topomaps(raw_all, groups["large"], title=f"Große Sakkaden (≥ 10°) – {label}")
 
-def main(raw):
-    large, small = get_info(raw)
-    plot_saccade_topomaps(raw, small, title="Kleine Sakkaden (≤ 2°)") # large
-    plot_saccade_topomaps(raw, large, title="Große Sakkaden (> 10°)")
+def main(raws, cleaned):
+    if config.saccade_topomaps_raw:
+        _topomaps(raws, "nicht bereinigt")
+    if config.saccade_topomaps_cleaned:          # neues Flag in config.py
+        _topomaps(cleaned, "bereinigt")
+
+    if config.frp_plot_raw:
+        plot_saccade_frps_raw_runs("FRPs über nicht bereinigte Runs", [(f"Run {r}", raw) for r, raw in raws.items()])
+    if config.frp_plot_cleaned:
+        plot_saccade_frps_raw_runs("FRPs über bereinigte Runs", [(f"Run {r}", raw) for r, raw in cleaned.items()])
