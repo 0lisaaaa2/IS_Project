@@ -196,12 +196,13 @@ def prepare_opticat_data(raw, raw_ica=None):
 
     return raw_augmented
 
-# neue jamica version
+
+# neue jamica version mit do_reject 
 def fit_ica_model(raw_fit):
     if config.ica == "jamica":
         ica = fit_ica(
             raw_fit,
-            n_components=None,      # None = Rang der Daten (siehe unten)
+            n_components=None,
             max_iter=2000,
             random_state=97,
             fit_params=dict(do_reject=True, rejsig=3.0,
