@@ -51,21 +51,17 @@ def label_components_ica(raw, ica):
     return labels
 
 def exclude_components(ica, labels, ratios=None):
-    mode = "both"
-
-    # ocular ICs from the eye-tracker-based criterion
+    # ocular ICs from the eye-tracker-based criterion (only if computed)
     ocular = []
-    if mode in ("varratio", "both"):
+    if ratios is not None:
         ocular = np.flatnonzero(ratios > config.varratio_threshold).tolist()
 
-    # ICLabel
-    iclabel_excl = []
-    if mode in ("iclabel", "both"):
-        skip = ['brain', 'other']
-        iclabel_excl = [
-            idx for idx, lbl in enumerate(labels['labels'])
-            if lbl not in skip and labels['y_pred_proba'][idx].max() >= 0.8
-        ]
+    # ICLabel (always)
+    skip = ['brain', 'other']
+    iclabel_excl = [
+        idx for idx, lbl in enumerate(labels['labels'])
+        if lbl not in skip and labels['y_pred_proba'][idx].max() >= 0.8
+    ]
 
     excluded = sorted(set(ocular) | set(iclabel_excl))
     print(f"Variance-ratio (ocular) ICs: {ocular}")
@@ -318,9 +314,11 @@ def fit(raws):
     labels = label_components_ica(raw_ica, ica)
 
     # eye-tracker-based variance ratio on the original concated data
-    ratios = get_variants_ratio(raw_all, ica)
-    labels["variance_ratio"] = ratios
-    plot_variance_ratios(ratios)
+    ratios = None
+    if config.variance_criteria:
+        ratios = get_variants_ratio(raw_all, ica)
+        labels["variance_ratio"] = ratios
+        plot_variance_ratios(ratios)
 
     exclude_components(ica, labels, ratios)
     

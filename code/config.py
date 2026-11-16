@@ -5,7 +5,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent   # code/ → IS_Project/
 bids_root = PROJECT_ROOT / "data"
 results_dir = PROJECT_ROOT / "results"
 
-subject = "NDARHT518WEM" #( "NDARHT518WEM" | "NDARNA421FL7")
+subject = "NDARNA421FL7" #( "NDARHT518WEM" | "NDARNA421FL7")
 task = "allTasks"
 runs = ["1", "2", "3", "4", "5", "7", "8"] #6 ist komisch, deswegen nicht drin
 #runs = ["2"]
@@ -29,6 +29,7 @@ blink_pre_ms =50
 blink_post_ms = 100
 
 # Varianz-Kriterium
+variance_criteria = False #Hier einstellen, ob Varianzkriterium gemacht werden soll
 varratio_threshold = 1.1
 varratio_pre = 0.010
 varratio_post = 0.00
